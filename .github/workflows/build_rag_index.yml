@@ -1,0 +1,51 @@
+# Build RAG vector index from Godot docs.
+# Run manually or on schedule. Uploads index as workflow artifact.
+name: Build RAG index
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly on Monday at 02:00 UTC (after offline docs build)
+    - cron: '0 2 * * 1'
+
+jobs:
+  build-index:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-index-${{ hashFiles('requirements.txt', 'requirements-index.txt') }}
+
+      - name: Install Sphinx dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build HTML docs
+        run: make SPHINXOPTS='--color -j 4' html
+
+      - name: Install index dependencies
+        run: pip install -r requirements-index.txt
+
+      - name: Extract HTML to JSONL
+        run: python tools/extract_html_docs.py
+
+      - name: Build FAISS index
+        run: python tools/build_index.py
+
+      - name: Upload RAG index artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: godot-rag-index
+          path: |
+            _build/godot_rag_index.faiss
+            _build/godot_rag_metadata.json
+            _build/godot_rag_dataset.jsonl
+          retention-days: 30

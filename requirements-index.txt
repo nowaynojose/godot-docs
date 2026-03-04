@@ -1,0 +1,7 @@
+# Dependencies for building the RAG vector index.
+# Install with: pip install -r requirements-index.txt
+
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.0
